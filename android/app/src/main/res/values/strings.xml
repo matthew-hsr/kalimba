@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kalimba</string>
+    <string name="title_activity_main">Kalimba</string>
+    <string name="package_name">com.matthewhsr.kalimba</string>
+    <string name="custom_url_scheme">com.matthewhsr.kalimba</string>
+</resources>

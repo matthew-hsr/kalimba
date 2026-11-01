@@ -1,6 +1,6 @@
 // Offline support: serve from cache instantly, refresh the cache in the
 // background so updates show up on the next launch.
-const CACHE = 'kalimba-v1';
+const CACHE = 'kalimba-v2';
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/app.js', 'js/music.js', 'js/pitch.js', 'js/audio.js', 'js/songs.js',

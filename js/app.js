@@ -26,6 +26,8 @@ const $ = (sel, root = view) => root.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const freqOf = (d) => midiToFreq(degreeToMidi(d, settings.key));
 const letterOf = (d) => midiLetter(degreeToMidi(d, settings.key));
+// True inside the iOS / Android app (Capacitor), false in a browser.
+const native = !!window.Capacitor?.isNativePlatform?.();
 
 // A note as printed on the tine: number (or letter) with octave dots.
 function noteGlyph(d, extraClass = '') {
@@ -43,7 +45,8 @@ let wantAwake = false;
 async function keepAwake(on) {
   wantAwake = on;
   try {
-    if (on && !wakeLock && navigator.wakeLock && document.visibilityState === 'visible') {
+    if (native) await window.Capacitor.nativePromise('KeepAwake', on ? 'keepAwake' : 'allowSleep', {});
+    else if (on && !wakeLock && navigator.wakeLock && document.visibilityState === 'visible') {
       wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', () => (wakeLock = null));
     } else if (!on && wakeLock) {
@@ -98,7 +101,7 @@ function tunerView() {
       <div class="readout" id="readout" data-state="off">
         <div class="r-off">
           <button class="big-btn" id="start">Start tuner</button>
-          <p class="muted">Your browser will ask to use the microphone.<br>Nothing is recorded or sent anywhere.</p>
+          <p class="muted">Your ${native ? 'phone' : 'browser'} will ask to use the microphone.<br>Nothing is recorded or sent anywhere.</p>
         </div>
         <div class="r-on">
           <div class="r-note" id="r-note">–</div>
@@ -532,13 +535,13 @@ function settingsView() {
           .join('')}
       </div>
 
-      <h2>Put it on the home screen</h2>
+      ${native ? '' : `<h2>Put it on the home screen</h2>
       <div class="card">
         <p><b>iPhone / iPad:</b> open this page in Safari, tap the Share button
         <svg class="inline" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v8h14v-8"/></svg>, then <b>Add to Home Screen</b>.</p>
         <p><b>Android:</b> open this page in Chrome, tap the <b>⋮</b> menu, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
         <p class="muted">After the first visit it works without internet.</p>
-      </div>
+      </div>`}
 
       <h2>How to read the songs</h2>
       <div class="card legend-card">
@@ -582,11 +585,18 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
+// Android back button: from a song go back to the list, otherwise leave the app.
+if (native) {
+  window.Capacitor.nativeCallback('App', 'addListener', { eventName: 'backButton' }, () => {
+    if (location.hash.startsWith('#/song/')) location.hash = '#/songs';
+    else window.Capacitor.nativePromise('App', 'minimizeApp', {});
+  });
+}
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && wantAwake) keepAwake(true);
 });
 route();
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if (!native && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

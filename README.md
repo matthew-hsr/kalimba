@@ -27,6 +27,39 @@ Then open the URL on the phone or tablet and add it to the home screen
 
 To run it locally: `python3 -m http.server 8765` and open http://localhost:8765.
 
+## iOS and Android apps
+
+The same web code is wrapped as native apps with [Capacitor](https://capacitorjs.com)
+(`ios/`, `android/`). App id: `com.matthewhsr.kalimba`.
+
+```
+npm install
+npm run sync          # copies the web files into www/ and into both native projects
+```
+
+Run `npm run sync` after every change to the web files.
+
+- **iOS**: `npx cap open ios`, pick a device or simulator, press Run. For the App Store:
+  Product → Archive → Distribute App → App Store Connect.
+- **Android**: `npx cap open android`, press Run. For Google Play, build a signed bundle:
+  `cd android && ./gradlew bundleRelease` → `android/app/build/outputs/bundle/release/app-release.aab`.
+  Signing reads `android/keystore.properties` (not in git), which points at the upload key.
+  Keep a backup of the key and its password.
+
+To publish an update, raise `versionCode` / `versionName` in `android/app/build.gradle`
+and the version and build number in Xcode, then sync and build again.
+
+Native differences, all in `js/app.js` behind `native`:
+- the screen-awake code uses `@capacitor-community/keep-awake`
+- the Android back button goes from a song back to the list, otherwise leaves the app (`@capacitor/app`)
+- the service worker and the home-screen instructions are skipped
+
+The privacy policy for the store listings is `privacy.html`
+(https://matthew-hsr.github.io/kalimba/privacy.html).
+
+Icons and splash screens: `node tools/make-icons.mjs`, then
+`npx @capacitor/assets@3.0.5 generate --ios --android --iconBackgroundColor '#b07c52' --splashBackgroundColor '#f7f1e8' --splashBackgroundColorDark '#1b1713'`.
+
 ## Adding songs
 
 Songs live in `js/songs.js`, one object per song. The notation:
@@ -61,4 +94,5 @@ Bump `CACHE` in `sw.js` when you change files so installed copies pick up the up
 - `js/audio.js`: kalimba synth and microphone
 - `js/app.js`: screens
 - `js/songs.js`: song library
-- `tools/make-icons.mjs`: regenerates the app icons
+- `tools/make-icons.mjs`: regenerates the app icons and splash sources (`assets/`)
+- `tools/build-www.mjs`: copies the web app into `www/` for Capacitor

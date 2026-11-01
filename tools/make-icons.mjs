@@ -1,9 +1,9 @@
 // Draws the app icon (a kalimba: wood board, bridge, metal tines) as PNGs.
 // Run: node tools/make-icons.mjs
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-function png(size) {
+function draw(size) {
   const px = new Uint8Array(size * size * 3);
   const set = (x, y, [r, g, b]) => { const i = (y * size + x) * 3; px[i] = r; px[i + 1] = g; px[i + 2] = b; };
   const s = size / 512;
@@ -31,7 +31,25 @@ function png(size) {
   }
   rect(70, 112, 442, 140, [214, 216, 220]); // bridge
   rect(70, 136, 442, 140, [150, 152, 156]);
+  return px;
+}
 
+// A splash screen: the icon, with rounded corners, centred on a plain background.
+function splash(size, iconSize, bg) {
+  const px = new Uint8Array(size * size * 3);
+  for (let i = 0; i < px.length; i += 3) px.set(bg, i);
+  const icon = draw(iconSize), off = (size - iconSize) >> 1, r = iconSize * 0.22;
+  for (let y = 0; y < iconSize; y++) for (let x = 0; x < iconSize; x++) {
+    const dx = Math.max(r - x, x - (iconSize - 1 - r), 0), dy = Math.max(r - y, y - (iconSize - 1 - r), 0);
+    if (dx * dx + dy * dy > r * r) continue;
+    px.set(icon.subarray((y * iconSize + x) * 3, (y * iconSize + x) * 3 + 3), ((y + off) * size + x + off) * 3);
+  }
+  return encode(px, size);
+}
+
+const png = (size) => encode(draw(size), size);
+
+function encode(px, size) {
   const raw = Buffer.alloc((size * 3 + 1) * size);
   for (let y = 0; y < size; y++) { raw[y * (size * 3 + 1)] = 0; Buffer.from(px.buffer, y * size * 3, size * 3).copy(raw, y * (size * 3 + 1) + 1); }
   const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -43,4 +61,9 @@ function png(size) {
 
 for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]])
   writeFileSync(new URL(`../icons/${name}`, import.meta.url), png(size));
+// Source for the native app icons and splash screens (npm run assets).
+mkdirSync(new URL('../assets/', import.meta.url), { recursive: true });
+writeFileSync(new URL('../assets/icon-only.png', import.meta.url), png(1024));
+writeFileSync(new URL('../assets/splash.png', import.meta.url), splash(2732, 640, [247, 241, 232]));
+writeFileSync(new URL('../assets/splash-dark.png', import.meta.url), splash(2732, 640, [27, 23, 19]));
 console.log('icons written');
